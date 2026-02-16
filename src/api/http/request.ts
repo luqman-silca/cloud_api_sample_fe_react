@@ -11,7 +11,7 @@ function getAuthToken () {
 }
 
 const instance = axios.create({
-  // withCredentials: true,
+  withCredentials: true,
   headers: {
     'Content-Type': 'application/json',
   },

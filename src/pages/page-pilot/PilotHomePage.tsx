@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react'
-import { Layout, Row, Col, Avatar, Drawer, Button, Divider, Modal, message } from 'antd'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { Layout, Row, Col, Avatar, Drawer, Button, Divider, Modal, message, Space } from 'antd'
 import { RightOutlined, CloudSyncOutlined, SyncOutlined } from '@ant-design/icons'
 import { useNavigate } from 'react-router-dom'
 import { BindBody, bindDevice, getDeviceBySn, getPlatformInfo, getUserInfo } from '@/api/manage'
@@ -59,6 +59,15 @@ function PilotHomePage() {
     user_id: '',
     workspace_id: wsId
   })
+
+  // Use ref to avoid closure issues in setInterval
+  const bindParamRef = useRef<BindBody>(bindParam)
+  const monitorIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    bindParamRef.current = bindParam
+  }, [bindParam])
 
   const [components] = useState(() => apiPilot.init())
 
@@ -231,6 +240,21 @@ function PilotHomePage() {
         storedWorkspaceName,
         localStorage.getItem(ELocalStorageKey.WorkspaceDesc) || ''
       )
+
+      // 🔥 FIX: Set bindParam from localStorage when Thing is already loaded
+      const storedUserId = localStorage.getItem(ELocalStorageKey.UserId) || ''
+      const storedWorkspaceId = localStorage.getItem(ELocalStorageKey.WorkspaceId) || ''
+      console.log('🔄 Thing already loaded, setting bindParam from localStorage:', {
+        device_sn: gatewaySn,
+        user_id: storedUserId,
+        workspace_id: storedWorkspaceId
+      })
+      setBindParam({
+        device_sn: gatewaySn,
+        user_id: storedUserId,
+        workspace_id: storedWorkspaceId
+      })
+
       return
     }
 
@@ -248,6 +272,12 @@ function PilotHomePage() {
         password: res.data.mqtt_password,
         connectCallback: 'connectCallback'
       }
+      console.log('🔌 MQTT credentials from getUserInfo:', {
+        host: res.data.mqtt_addr,
+        username: res.data.mqtt_username,
+        password: res.data.mqtt_password ? '***' : 'MISSING',
+        full_response: res.data
+      })
       components.set(EComponentName.Thing, param)
       apiPilot.loadComponent(EComponentName.Thing, components.get(EComponentName.Thing))
 
@@ -266,7 +296,9 @@ function PilotHomePage() {
   }, [])
 
   const connectCallback = useCallback(async (arg: any) => {
+    console.log('🎯 connectCallback triggered, arg:', arg)
     if (arg) {
+      console.log('✅ MQTT Connected! Loading components...')
       setThingState(EStatusValue.CONNECTED)
 
       // liveshare
@@ -293,18 +325,25 @@ function PilotHomePage() {
       apiPilot.loadComponent(EComponentName.Mission, {})
 
       // Auto-bind device
+      console.log('🟢 Setting up bind interval, initial bindParam:', bindParam)
       const bindInterval = setInterval(() => {
-        if (!bindParam.device_sn) {
+        const currentBindParam = bindParamRef.current // Use ref to get latest value
+        console.log('🔄 Bind interval tick, bindParam:', currentBindParam)
+        if (!currentBindParam.device_sn) {
           const gatewaySn = apiPilot.getRemoteControllerSN()
+          console.log('⚠️ No device_sn, got from API:', gatewaySn)
           setDevice(prev => ({ ...prev, data: { ...prev.data, gateway_sn: gatewaySn } }))
           setBindParam(prev => ({ ...prev, device_sn: gatewaySn }))
           return
         }
-        bindDevice(bindParam).then(bindRes => {
+        console.log('🚀 Calling bindDevice with:', currentBindParam)
+        bindDevice(currentBindParam).then(bindRes => {
+          console.log('📥 Bind response:', bindRes)
           if (bindRes.code !== 0) {
             message.error(bindRes.message)
             console.error(bindRes.message)
           } else {
+            console.log('✅ Bind successful, clearing interval')
             clearInterval(bindInterval)
           }
         })
@@ -326,14 +365,26 @@ function PilotHomePage() {
   }, [])
 
   const showStatus = () => {
-    const monitorInterval = setInterval(() => {
+    // Clear any existing interval
+    if (monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current)
+    }
+
+    // Set up new interval
+    monitorIntervalRef.current = setInterval(() => {
       refreshStatus()
-      if (!drawerVisible) {
-        clearInterval(monitorInterval)
-      }
     }, 2000)
+
     setDrawerVisible(true)
   }
+
+  // Clean up interval when drawer closes
+  useEffect(() => {
+    if (!drawerVisible && monitorIntervalRef.current) {
+      clearInterval(monitorIntervalRef.current)
+      monitorIntervalRef.current = null
+    }
+  }, [drawerVisible])
 
   const confirmAgain = () => {
     setExitVisible(true)
@@ -443,47 +494,67 @@ function PilotHomePage() {
                 )}
                 <span style={{ color: '#737373', marginLeft: 3 }}>{thingState}</span>
               </div>
-              <Drawer
-                placement="right"
-                open={drawerVisible}
-                onClose={() => setDrawerVisible(false)}
-                width={340}
-              >
-                <div style={{ marginBottom: 10, display: 'flex', flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}>
-                  <p style={{ fontSize: 14, fontWeight: 100 }}>Module State</p>
-                </div>
-                {modules.map((m) => (
-                  <div key={m.name} style={{ width: '100%', marginBottom: 10, display: 'flex', alignItems: 'flex-start', height: 30 }}>
-                    <div style={{ marginLeft: 5, float: 'left', color: '#000000' }}>{m.name}：</div>
-                    <div style={{ marginLeft: 10, float: 'right', marginBottom: 8 }}>
-                      <span style={{ color: m.state === EStatusValue.CONNECTED ? 'green' : 'red' }}>
-                        {m.state}&nbsp;
-                      </span>
-                      <Button.Group>
-                        <Button
-                          style={{ marginLeft: 5 }}
-                          type="primary"
-                          size="small"
-                          onClick={() => moduleInstall(m)}
-                        >
-                          install
-                        </Button>
-                        <Button
-                          style={{ marginLeft: 5, marginRight: 5 }}
-                          danger
-                          size="small"
-                          onClick={() => moduleUninstall(m)}
-                        >
-                          uninstall
-                        </Button>
-                      </Button.Group>
-                    </div>
-                    <Divider />
-                  </div>
-                ))}
-              </Drawer>
             </Content>
           </Layout>
+
+          {/* Drawer moved outside of clickable Content to prevent interference */}
+          <Drawer
+            placement="right"
+            open={drawerVisible}
+            onClose={() => setDrawerVisible(false)}
+            width={340}
+          >
+            <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+              <p style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>Module State</p>
+            </div>
+            {modules.map((m, index) => (
+              <div key={m.name}>
+                <div style={{
+                  width: '100%',
+                  padding: '12px 0',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '8px'
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center'
+                  }}>
+                    <span style={{ fontWeight: 500, color: '#000000' }}>{m.name}</span>
+                    <span style={{
+                      color: m.state === EStatusValue.CONNECTED ? '#52c41a' : '#ff4d4f',
+                      fontSize: '12px'
+                    }}>
+                      {m.state}
+                    </span>
+                  </div>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    gap: '8px'
+                  }}>
+                    <Button
+                      type="primary"
+                      size="small"
+                      onClick={() => moduleInstall(m)}
+                    >
+                      install
+                    </Button>
+                    <Button
+                      danger
+                      size="small"
+                      onClick={() => moduleUninstall(m)}
+                    >
+                      uninstall
+                    </Button>
+                  </div>
+                </div>
+                {index < modules.length - 1 && <Divider style={{ margin: '0' }} />}
+              </div>
+            ))}
+          </Drawer>
+
           <Divider style={{ height: 2, backgroundColor: '#f5f5f5', marginTop: '3vh' }} />
 
           <Button

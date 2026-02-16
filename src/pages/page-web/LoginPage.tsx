@@ -9,8 +9,8 @@ import djiLogo from '@/assets/icons/dji_logo.png'
 function LoginPage() {
   const navigate = useNavigate()
   const [formState, setFormState] = useState<LoginBody>({
-    username: 'adminPC',
-    password: 'adminPC',
+    username: 'user@example.com',
+    password: 'password123',
     flag: EUserType.Web,
   })
 
@@ -23,6 +23,7 @@ function LoginPage() {
     if (result.code === 0) {
       localStorage.setItem(ELocalStorageKey.Token, result.data.access_token)
       localStorage.setItem(ELocalStorageKey.WorkspaceId, result.data.workspace_id)
+      localStorage.setItem(ELocalStorageKey.WorkspaceName, result.data.workspace_name)
       localStorage.setItem(ELocalStorageKey.Username, result.data.username)
       localStorage.setItem(ELocalStorageKey.UserId, result.data.user_id)
       localStorage.setItem(ELocalStorageKey.Flag, EUserType.Web.toString())

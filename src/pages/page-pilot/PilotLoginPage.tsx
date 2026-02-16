@@ -92,6 +92,7 @@ function PilotLoginPage() {
         apiPilot.setToken(res.data.access_token)
         localStorage.setItem(ELocalStorageKey.Token, res.data.access_token)
         localStorage.setItem(ELocalStorageKey.WorkspaceId, res.data.workspace_id)
+        localStorage.setItem(ELocalStorageKey.WorkspaceName, res.data.workspace_name)
         localStorage.setItem(ELocalStorageKey.UserId, res.data.user_id)
         localStorage.setItem(ELocalStorageKey.Username, res.data.username)
         localStorage.setItem(ELocalStorageKey.Flag, EUserType.Pilot.toString())
@@ -120,7 +121,7 @@ function PilotLoginPage() {
         style={{ width: '17vw', height: '10vw', marginBottom: 50 }}
       />
       <p style={{ fontSize: 35, paddingBottom: 50, color: '#1890ff' }}>Pilot Cloud API Demo</p>
-      <Form form={form} layout="inline" onFinish={onSubmit} initialValues={{ username: 'pilot', password: 'pilot123' }}>
+      <Form form={form} layout="inline" onFinish={onSubmit} initialValues={{ username: 'user@example.com', password: 'password123' }}>
         <Form.Item name="username" rules={[{ required: true }]}>
           <Input prefix={<UserOutlined style={{ color: 'rgba(0, 0, 0, 0.25)' }} />} placeholder="Username" />
         </Form.Item>

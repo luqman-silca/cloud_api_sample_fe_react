@@ -6,8 +6,8 @@ export const CURRENT_CONFIG = {
   appLicense: 'pF2oAGqPluqsMZAASL5/PTWyZ15CSTYXEZMeaESnWuRbx+7BXwpzwGVkhORLlG0emcGGuBlJ029+mA4wBjzYjUJb1o8t8dlpeW20KGUneEulZP8fi+gq2qyBNqSUKDHT2PumFKakdgbi+iaOjAA0y831VFywHF7LX/vudLWRrpU=', // You need to go to the development website to apply.
 
   // http
-  baseURL: 'http://192.168.95.104:6789/', // This url must end with "/". Example: 'http://192.168.1.1:6789/'
-  websocketURL: 'ws://192.168.95.104:6789/api/v1/ws', // Example: 'ws://192.168.1.1:6789/api/v1/ws'
+  baseURL: 'http://10.80.0.107:3001/v1/', // NestJS backend URL (compatibility layer provides Java-style routes at /manage/api/v1, /wayline/api/v1, etc.)
+  websocketURL: 'ws://10.80.0.107:3001/api/v1/ws', // STOMP WebSocket URL for DJI Pilot app (matches Java backend)
 
   // livestreaming
   // RTMP  Note: This IP is the address of the streaming server. If you want to see livestream on web page, you need to convert the RTMP stream to WebRTC stream.
