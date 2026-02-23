@@ -4,8 +4,9 @@ import { RightOutlined, CloudSyncOutlined, SyncOutlined } from '@ant-design/icon
 import { useNavigate } from 'react-router-dom'
 import { BindBody, bindDevice, getDeviceBySn, getPlatformInfo, getUserInfo } from '@/api/manage'
 import apiPilot, { ApiParam, MapParam, ThingParam, WsParam } from '@/api/pilot-bridge'
-import { EBizCode, EComponentName, EDownloadOwner, ELocalStorageKey, ERouterName, EStatusValue } from '@/types'
+import { EBizCode, EComponentName, EDownloadOwner, ELocalStorageKey, ERouterName, EStatusValue, ELiveStatusValue } from '@/types'
 import { DeviceStatus } from '@/types/device'
+import { LiveStreamStatus } from '@/types/live-stream'
 import { useConnectWebSocket } from '@/hooks/use-connect-websocket'
 import cloudapiIcon from '@/assets/icons/cloudapi.png'
 
@@ -191,6 +192,20 @@ function PilotHomePage() {
     }
   }, [device.data])
 
+  const liveStatusCallback = useCallback((arg: LiveStreamStatus) => {
+    console.log('📡 liveStatusCallback:', arg)
+    switch (arg.status) {
+      case ELiveStatusValue.LIVING:
+        setLiveState(EStatusValue.LIVING)
+        break
+      case ELiveStatusValue.CONNECTED:
+        setLiveState(EStatusValue.CONNECTED)
+        break
+      default:
+        setLiveState(EStatusValue.DISCONNECT)
+    }
+  }, [])
+
   useConnectWebSocket(messageHandler)
 
   useEffect(() => {
@@ -208,6 +223,9 @@ function PilotHomePage() {
     }
     ;(window as any).wsConnectCallback = (arg: any) => {
       wsConnectCallback(arg)
+    }
+    ;(window as any).liveStatusCallback = (arg: LiveStreamStatus) => {
+      liveStatusCallback(arg)
     }
 
     const gatewaySn = apiPilot.getRemoteControllerSN()
@@ -304,15 +322,18 @@ function PilotHomePage() {
       // liveshare
       apiPilot.loadComponent(EComponentName.Liveshare, components.get(EComponentName.Liveshare))
 
-      // ws
+      // ws - Fix: Save modified wsParam back to components before loading
       const wsParam: WsParam = components.get(EComponentName.Ws)
       wsParam.token = apiPilot.getToken()
-      apiPilot.loadComponent(EComponentName.Ws, components.get(EComponentName.Ws))
+      components.set(EComponentName.Ws, wsParam)
+      console.log('🌐 Loading WebSocket with params:', { host: wsParam.host, token: wsParam.token ? '***' : 'MISSING', callback: wsParam.connectCallback })
+      apiPilot.loadComponent(EComponentName.Ws, wsParam)
 
-      // map
+      // map - Fix: Save modified mapParam back to components before loading
       const mapParam: MapParam = components.get(EComponentName.Map)
       mapParam.userName = username
-      apiPilot.loadComponent(EComponentName.Map, components.get(EComponentName.Map))
+      components.set(EComponentName.Map, mapParam)
+      apiPilot.loadComponent(EComponentName.Map, mapParam)
 
       // tsa
       apiPilot.loadComponent(EComponentName.Tsa, components.get(EComponentName.Tsa))
