@@ -10,6 +10,9 @@ import { useMapContext } from '@/contexts/MapContext'
 export function useGMapTsa() {
   const { aMap: AMap, map } = useMapContext()
   const markerInfo = useDeviceStore((s) => s.markerInfo)
+  const deviceInfo = useDeviceStore((s) => s.deviceState.deviceInfo)
+  const dockInfo = useDeviceStore((s) => s.deviceState.dockInfo)
+  const gatewayInfo = useDeviceStore((s) => s.deviceState.gatewayInfo)
 
   const icons = new Map([
     [EDeviceTypeName.Aircraft, droneIcon],
@@ -71,7 +74,14 @@ export function useGMapTsa() {
     delete paths[sn]
   }
 
-  function addMarker(sn: string, lng?: number, lat?: number) {
+  function addMarker(sn: string, lng?: number, lat?: number, domain?: number, nickname?: string) {
+    // If domain and nickname provided, use them directly (from device store)
+    if (domain !== undefined && nickname) {
+      initMarker(domain, nickname, sn, lng, lat)
+      return
+    }
+
+    // Fallback: fetch from API (only if data not available)
     getDeviceBySn(
       localStorage.getItem(ELocalStorageKey.WorkspaceId)!,
       sn
@@ -87,7 +97,22 @@ export function useGMapTsa() {
   function moveTo(sn: string, lng: number, lat: number) {
     let marker = markers[sn]
     if (!marker) {
-      addMarker(sn, lng, lat)
+      // Try to get device info from store first (no API call needed!)
+      const device = deviceInfo[sn] || dockInfo[sn] || gatewayInfo[sn]
+
+      if (device) {
+        // Use domain from OSD data
+        const domain = device.mode_code !== undefined ? EDeviceTypeName.Aircraft :
+                      device.basic_osd ? EDeviceTypeName.Dock :
+                      EDeviceTypeName.Gateway
+
+        // Use sn as nickname if not available (will be populated later)
+        addMarker(sn, lng, lat, domain, sn)
+      } else {
+        // Fallback to API call if device not in store yet
+        addMarker(sn, lng, lat)
+      }
+
       marker = markers[sn]
       return
     }

@@ -27,6 +27,10 @@ function LoginPage() {
       localStorage.setItem(ELocalStorageKey.Username, result.data.username)
       localStorage.setItem(ELocalStorageKey.UserId, result.data.user_id)
       localStorage.setItem(ELocalStorageKey.Flag, EUserType.Web.toString())
+
+      // Trigger auth change event to initialize WebSocket
+      window.dispatchEvent(new Event('auth-changed'))
+
       navigate('/' + ERouterName.HOME + '/' + ERouterName.MEMBERS)
     } else {
       message.error(result.message)

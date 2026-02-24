@@ -2,8 +2,7 @@ import { useEffect } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
 import { Layout } from 'antd'
 import Topbar from '@/components/common/Topbar'
-import { EBizCode, ELocalStorageKey, ERouterName } from '@/types'
-import EventBus from '@/event-bus'
+import { ELocalStorageKey, ERouterName } from '@/types'
 
 const { Header, Content } = Layout
 

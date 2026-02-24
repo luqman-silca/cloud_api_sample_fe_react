@@ -27,6 +27,7 @@ class ConnectWebSocket {
   _hasInit: boolean
   _messageHandler: MessageHandler | null
   _token: string
+  _joinedRooms: Set<string>  // Track joined rooms
 
   constructor (url: string) {
     this._url = url
@@ -34,6 +35,7 @@ class ConnectWebSocket {
     this._hasInit = false
     this._messageHandler = null
     this._token = ''
+    this._joinedRooms = new Set()
 
     // Extract token from URL if present (ws://url?x-auth-token=xxx)
     const urlObj = new URL(url.replace('ws://', 'http://').replace('wss://', 'https://'))
@@ -86,6 +88,8 @@ class ConnectWebSocket {
 
   _onClose (reason: string) {
     console.log('Socket.IO disconnected:', reason)
+    // Clear joined rooms on disconnect
+    this._joinedRooms.clear()
   }
 
   _onError (error: Error) {
@@ -121,11 +125,68 @@ class ConnectWebSocket {
     this._socket.emit('message', message.data)
   }
 
+  emit = (event: string, data?: any): void => {
+    if (!this._socket || !this._socket.connected) {
+      console.warn('Socket.IO not connected, cannot emit event')
+      return
+    }
+
+    this._socket.emit(event, data)
+  }
+
+  /**
+   * Check if already joined an OSD room for a device
+   */
+  isInDeviceOsdRoom = (deviceSn: string): boolean => {
+    return this._joinedRooms.has(`osd:${deviceSn}`)
+  }
+
+  /**
+   * Join OSD room for a device (idempotent - safe to call multiple times)
+   */
+  joinDeviceOsd = (deviceSn: string): void => {
+    const roomKey = `osd:${deviceSn}`
+
+    // Skip if already joined
+    if (this._joinedRooms.has(roomKey)) {
+      console.log(`Already in OSD room for device: ${deviceSn}`)
+      return
+    }
+
+    this.emit('join:device:osd', deviceSn)
+    this._joinedRooms.add(roomKey)
+    console.log(`Joined OSD room for device: ${deviceSn}`)
+  }
+
+  /**
+   * Leave OSD room for a device
+   */
+  leaveDeviceOsd = (deviceSn: string): void => {
+    const roomKey = `osd:${deviceSn}`
+
+    if (!this._joinedRooms.has(roomKey)) {
+      console.log(`Not in OSD room for device: ${deviceSn}`)
+      return
+    }
+
+    this.emit('leave:device:osd', deviceSn)
+    this._joinedRooms.delete(roomKey)
+    console.log(`Left OSD room for device: ${deviceSn}`)
+  }
+
+  /**
+   * Get list of all joined rooms
+   */
+  getJoinedRooms = (): string[] => {
+    return Array.from(this._joinedRooms)
+  }
+
   close () {
     if (this._socket) {
       this._socket.disconnect()
       this._socket = null
       this._hasInit = false
+      this._joinedRooms.clear()
     }
   }
 }

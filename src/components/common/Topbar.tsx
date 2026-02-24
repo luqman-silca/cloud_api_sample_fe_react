@@ -34,6 +34,10 @@ function Topbar() {
 
   const logout = () => {
     localStorage.clear()
+
+    // Trigger auth change event to close WebSocket
+    window.dispatchEvent(new Event('auth-changed'))
+
     navigate('/' + ERouterName.PROJECT)
   }
 

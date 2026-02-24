@@ -11,12 +11,14 @@ import { EDeviceTypeName, ELocalStorageKey, EHmsLevel } from '@/types'
 import { OnlineDevice, EModeCode, EDockModeCode, DeviceHms } from '@/types/device'
 import { useDeviceStore } from '@/store/useDeviceStore'
 import { getDeviceTopo, getUnreadDeviceHms, updateDeviceHms } from '@/api/manage'
+import { useWebSocket } from '@/contexts/WebSocketContext'
 import noData from '@/assets/icons/no-data.png'
 import rc from '@/assets/icons/rc.png'
 
 function TsaPage() {
   const username = localStorage.getItem(ELocalStorageKey.Username)
   const workspaceId = localStorage.getItem(ELocalStorageKey.WorkspaceId)!
+  const ws = useWebSocket()
 
   const [onlineDevices, setOnlineDevices] = useState<OnlineDevice[]>([])
   const [onlineDocks, setOnlineDocks] = useState<OnlineDevice[]>([])
@@ -33,7 +35,9 @@ function TsaPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const getOnlineTopo = useCallback(() => {
+    console.log('getOnlineTopo called, ws:', ws)
     getDeviceTopo(workspaceId).then((res) => {
+      console.log('Device topology response:', res)
       if (res.code !== 0) return
       const devices: OnlineDevice[] = []
       const docks: OnlineDevice[] = []
@@ -62,17 +66,38 @@ function TsaPage() {
             payload_index: payload.payload_index,
           })
         })
-        if (EDeviceTypeName.Dock === gateway.domain) {
+        if (EDeviceTypeName.Dock === Number(gateway.domain)) {
           docks.push(device)
         }
-        if (gateway.status && EDeviceTypeName.Gateway === gateway.domain) {
+        if (gateway.status && EDeviceTypeName.Gateway === Number(gateway.domain)) {
           devices.push(device)
+        }
+
+        // Join WebSocket OSD rooms for this device
+        console.log('Checking ws for room joining, ws:', ws, 'gateway.device_sn:', gateway?.device_sn, 'child.device_sn:', child?.device_sn)
+        if (ws) {
+          console.log('ws exists, joining rooms...')
+          if (gateway?.device_sn) {
+            console.log('Joining gateway OSD room:', gateway.device_sn)
+            ws.joinDeviceOsd(gateway.device_sn)
+          }
+          if (child?.device_sn) {
+            console.log('Joining child OSD room:', child.device_sn)
+            ws.joinDeviceOsd(child.device_sn)
+          }
+        } else {
+          console.warn('ws is null, cannot join OSD rooms!')
         }
       })
       setOnlineDevices(devices)
       setOnlineDocks(docks)
+
+      // Log all joined rooms for debugging
+      if (ws) {
+        console.log('Subscribed to OSD rooms:', ws.getJoinedRooms())
+      }
     })
-  }, [workspaceId])
+  }, [workspaceId, ws])
 
   const getUnreadHms = useCallback(
     (sn: string) => {
