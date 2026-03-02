@@ -1,9 +1,9 @@
-import AMapLoader from '@amap/amap-jsapi-loader'
-import { AMapConfig } from '@/constants/index'
+import maplibregl from 'maplibre-gl'
+import 'maplibre-gl/dist/maplibre-gl.css'
 
 interface MapState {
-  aMap: any
-  map: any
+  aMap: typeof maplibregl
+  map: maplibregl.Map
   mouseTool: any
 }
 
@@ -13,16 +13,45 @@ export function useGMapManage() {
     onReady: (state: MapState) => void
   ) {
     try {
-      const AMap = await AMapLoader.load({ ...AMapConfig })
-      const map = new AMap.Map(container, {
-        center: [113.943225499, 22.577673716],
-        zoom: 20,
+      // Initialize MapLibre GL map with OpenStreetMap tiles
+      const map = new maplibregl.Map({
+        container: container,
+        style: {
+          version: 8,
+          sources: {
+            'osm-tiles': {
+              type: 'raster',
+              tiles: [
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+              ],
+              tileSize: 256,
+              attribution: '© OpenStreetMap contributors'
+            }
+          },
+          layers: [
+            {
+              id: 'osm-tiles',
+              type: 'raster',
+              source: 'osm-tiles',
+              minzoom: 0,
+              maxzoom: 19
+            }
+          ]
+        },
+        center: [101.69, 2.84], // Malaysia (default to drone location)
+        zoom: 15,
       })
-      const mouseTool = new AMap.MouseTool(map)
 
-      onReady({ aMap: AMap, map, mouseTool })
+      // Wait for map to load
+      map.on('load', () => {
+        onReady({
+          aMap: maplibregl,
+          map,
+          mouseTool: null
+        })
+      })
     } catch (e) {
-      console.log(e)
+      console.log('Map initialization error:', e)
     }
   }
 

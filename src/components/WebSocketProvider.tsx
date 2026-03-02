@@ -17,13 +17,17 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       return
     }
 
-    console.log('WebSocket message received:', payload)
-
     // Handle different message types
     if (payload.sn) {
       // Check if it's an OSD message (has type field)
       if (payload.type) {
-        console.log(`OSD update for ${payload.sn}:`, payload.type, payload.data)
+        // Log only if position data is present (to reduce noise)
+        if (payload.data?.longitude && payload.data?.latitude) {
+          console.log(`📍 Position update - ${payload.type} ${payload.sn}:`, {
+            lng: payload.data.longitude,
+            lat: payload.data.latitude
+          })
+        }
 
         // Update device store based on device type
         if (payload.type === 'dock') {
