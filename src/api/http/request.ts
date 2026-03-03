@@ -32,18 +32,13 @@ instance.interceptors.request.use(
 
 instance.interceptors.response.use(
   response => {
-    console.info('URL: ' + response.config.baseURL + response.config.url, '\nData: ', response.data, '\nResponse:', response)
     if (response.data.code && response.data.code !== 0) {
       message.error(response.data.message)
     }
     return response
   },
   err => {
-    const requestId = err?.config?.headers && err?.config?.headers[REQUEST_ID]
-    if (requestId) {
-      console.info(REQUEST_ID, '：', requestId)
-    }
-    console.info('url: ', err?.config?.url, `【${err?.config?.method}】 \n>>>> err: `, err)
+    console.error('API Error:', err?.config?.url, err?.config?.method, err)
 
     let description = '-'
     if (err.response?.data && err.response.data.message) {

@@ -180,7 +180,6 @@ function GMap() {
       setAMap(state.aMap)
       setMap(state.map)
       setMouseTool(state.mouseTool)
-      console.log('Map initialized successfully')
     })
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -211,13 +210,10 @@ function GMap() {
     const data = deviceState
     if (data.currentType === EDeviceTypeName.Gateway && data.gatewayInfo[data.currentSn]) {
       const osd = data.gatewayInfo[data.currentSn]
-      console.log('🗺️ Gateway OSD update:', data.currentSn, { lng: osd.longitude, lat: osd.latitude })
       const coordinate = wgs84togcj02(
         osd.longitude,
         osd.latitude
       )
-      console.log('  → Converted coordinates:', coordinate)
-      console.log('  → Calling moveTo...')
       deviceTsaHook.moveTo(data.currentSn, coordinate[0], coordinate[1])
       if (osdVisible.visible && osdVisible.gateway_sn !== '') {
         setDeviceInfo((prev) => ({
@@ -228,13 +224,10 @@ function GMap() {
     }
     if (data.currentType === EDeviceTypeName.Aircraft && data.deviceInfo[data.currentSn]) {
       const osd = data.deviceInfo[data.currentSn]
-      console.log('🗺️ Aircraft OSD update:', data.currentSn, { lng: osd.longitude, lat: osd.latitude })
       const coordinate = wgs84togcj02(
         osd.longitude,
         osd.latitude
       )
-      console.log('  → Converted coordinates:', coordinate)
-      console.log('  → Calling moveTo...')
       deviceTsaHook.moveTo(data.currentSn, coordinate[0], coordinate[1])
       if (osdVisible.visible && osdVisible.sn !== '') {
         setDeviceInfo((prev) => ({
@@ -299,13 +292,9 @@ function GMap() {
       setMapElementCreate({})
     }
     if (Object.keys(wsEvent.mapElementUpdate).length !== 0) {
-      console.log(wsEvent.mapElementUpdate)
-      console.log('Map element update not yet implemented')
       setMapElementUpdate({})
     }
     if (Object.keys(wsEvent.mapElementDelete).length !== 0) {
-      console.log(wsEvent.mapElementDelete)
-      console.log('Map element delete not yet implemented')
       setMapElementDelete({})
     }
   }, [wsEvent]) // eslint-disable-line react-hooks/exhaustive-deps

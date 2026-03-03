@@ -290,12 +290,6 @@ function PilotHomePage() {
         password: res.data.mqtt_password,
         connectCallback: 'connectCallback'
       }
-      console.log('🔌 MQTT credentials from getUserInfo:', {
-        host: res.data.mqtt_addr,
-        username: res.data.mqtt_username,
-        password: res.data.mqtt_password ? '***' : 'MISSING',
-        full_response: res.data
-      })
       components.set(EComponentName.Thing, param)
       apiPilot.loadComponent(EComponentName.Thing, components.get(EComponentName.Thing))
 
@@ -314,9 +308,7 @@ function PilotHomePage() {
   }, [])
 
   const connectCallback = useCallback(async (arg: any) => {
-    console.log('🎯 connectCallback triggered, arg:', arg)
     if (arg) {
-      console.log('✅ MQTT Connected! Loading components...')
       setThingState(EStatusValue.CONNECTED)
 
       // liveshare
@@ -326,7 +318,6 @@ function PilotHomePage() {
       const wsParam: WsParam = components.get(EComponentName.Ws)
       wsParam.token = apiPilot.getToken()
       components.set(EComponentName.Ws, wsParam)
-      console.log('🌐 Loading WebSocket with params:', { host: wsParam.host, token: wsParam.token ? '***' : 'MISSING', callback: wsParam.connectCallback })
       apiPilot.loadComponent(EComponentName.Ws, wsParam)
 
       // map - Fix: Save modified mapParam back to components before loading
@@ -346,25 +337,18 @@ function PilotHomePage() {
       apiPilot.loadComponent(EComponentName.Mission, {})
 
       // Auto-bind device
-      console.log('🟢 Setting up bind interval, initial bindParam:', bindParam)
       const bindInterval = setInterval(() => {
-        const currentBindParam = bindParamRef.current // Use ref to get latest value
-        console.log('🔄 Bind interval tick, bindParam:', currentBindParam)
+        const currentBindParam = bindParamRef.current
         if (!currentBindParam.device_sn) {
           const gatewaySn = apiPilot.getRemoteControllerSN()
-          console.log('⚠️ No device_sn, got from API:', gatewaySn)
           setDevice(prev => ({ ...prev, data: { ...prev.data, gateway_sn: gatewaySn } }))
           setBindParam(prev => ({ ...prev, device_sn: gatewaySn }))
           return
         }
-        console.log('🚀 Calling bindDevice with:', currentBindParam)
         bindDevice(currentBindParam).then(bindRes => {
-          console.log('📥 Bind response:', bindRes)
           if (bindRes.code !== 0) {
             message.error(bindRes.message)
-            console.error(bindRes.message)
           } else {
-            console.log('✅ Bind successful, clearing interval')
             clearInterval(bindInterval)
           }
         })

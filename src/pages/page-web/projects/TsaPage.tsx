@@ -35,9 +35,7 @@ function TsaPage() {
   const scrollRef = useRef<HTMLDivElement>(null)
 
   const getOnlineTopo = useCallback(() => {
-    console.log('getOnlineTopo called, ws:', ws)
     getDeviceTopo(workspaceId).then((res) => {
-      console.log('Device topology response:', res)
       if (res.code !== 0) return
       const devices: OnlineDevice[] = []
       const docks: OnlineDevice[] = []
@@ -74,28 +72,17 @@ function TsaPage() {
         }
 
         // Join WebSocket OSD rooms for this device
-        console.log('Checking ws for room joining, ws:', ws, 'gateway.device_sn:', gateway?.device_sn, 'child.device_sn:', child?.device_sn)
         if (ws) {
-          console.log('ws exists, joining rooms...')
           if (gateway?.device_sn) {
-            console.log('Joining gateway OSD room:', gateway.device_sn)
             ws.joinDeviceOsd(gateway.device_sn)
           }
           if (child?.device_sn) {
-            console.log('Joining child OSD room:', child.device_sn)
             ws.joinDeviceOsd(child.device_sn)
           }
-        } else {
-          console.warn('ws is null, cannot join OSD rooms!')
         }
       })
       setOnlineDevices(devices)
       setOnlineDocks(docks)
-
-      // Log all joined rooms for debugging
-      if (ws) {
-        console.log('Subscribed to OSD rooms:', ws.getJoinedRooms())
-      }
     })
   }, [workspaceId, ws])
 
@@ -193,21 +180,26 @@ function TsaPage() {
     return 'notice-blink'
   }
 
-  const renderHmsPopover = (sn: string, hmsList: DeviceHms[]) => (
-    <Popover
-      trigger="click"
-      placement="bottom"
-      color="black"
-      open={hmsVisible[sn]}
-      onOpenChange={(v) => handleHmsVisibleChange(sn, v)}
-      overlayStyle={{ width: 200, height: 300 }}
-      content={
-        <Collapse
-          style={{ background: 'black', height: 300, overflowY: 'auto' }}
-          bordered={false}
-          expandIconPosition="end"
-          accordion
-          items={hmsList.map((hms) => ({
+  const renderHmsPopover = (sn: string, hmsList: DeviceHms[]) => {
+    // Get fresh HMS data when rendering content
+    const freshHmsList = hmsInfo[sn] || hmsList
+
+    return (
+      <Popover
+        key={`hms-${sn}-${freshHmsList.length}`}
+        trigger="click"
+        placement="bottom"
+        color="black"
+        open={hmsVisible[sn]}
+        onOpenChange={(v) => handleHmsVisibleChange(sn, v)}
+        overlayStyle={{ width: 200, height: 300 }}
+        content={
+          <Collapse
+            style={{ background: 'black', height: 300, overflowY: 'auto' }}
+            bordered={false}
+            expandIconPosition="end"
+            accordion
+            items={freshHmsList.map((hms) => ({
             key: hms.hms_id,
             showArrow: false,
             className: getHmsLevelClass(hms.level),
@@ -228,11 +220,12 @@ function TsaPage() {
         />
       }
     >
-      <div className={getHmsLevelClass(hmsList[0].level)} style={{ marginLeft: 3, width: 62, height: 16, cursor: 'pointer', overflow: 'hidden' }}>
-        <span className="word-loop">{hmsList[0].message_en}</span>
+      <div className={getHmsLevelClass(freshHmsList[0].level)} style={{ marginLeft: 3, width: 62, height: 16, cursor: 'pointer', overflow: 'hidden' }}>
+        <span className="word-loop">{freshHmsList[0].message_en}</span>
       </div>
     </Popover>
-  )
+    )
+  }
 
   const renderHmsSection = (sn: string) => {
     const hmsList = hmsInfo[sn]
@@ -256,11 +249,17 @@ function TsaPage() {
   const renderDockItem = (dock: OnlineDevice) => {
     const dockOsd = dockInfo[dock.gateway.sn]
     const droneOsd = deviceInfo[dock.sn]
-    const dockOnline = dockOsd && dockOsd.basic_osd?.mode_code !== EDockModeCode.Disconnected
+
+    // Dock is online if ANY OSD data exists (basic_osd, work_osd, or link_osd)
+    const dockOnline = dockOsd && (
+      (dockOsd.basic_osd?.mode_code !== undefined && dockOsd.basic_osd?.mode_code !== EDockModeCode.Disconnected) ||
+      dockOsd.work_osd !== undefined ||
+      dockOsd.link_osd !== undefined
+    )
     const droneOnline = droneOsd && droneOsd.mode_code !== EModeCode.Disconnected
 
     return (
-      <div key={dock.sn} style={{ background: '#3c3c3c', height: 90, width: 250, marginBottom: 10 }}>
+      <div key={dock.gateway.sn} style={{ background: '#3c3c3c', height: 90, width: 250, marginBottom: 10 }}>
         <div style={{ borderRadius: 2, height: '100%', width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ padding: '0px 5px 8px 8px', width: '88%' }}>
             <div style={{ width: '80%', height: 30, lineHeight: '30px', fontSize: 16 }}>
@@ -275,7 +274,14 @@ function TsaPage() {
               <div style={{ display: 'flex', alignItems: 'center' }}>
                 <span style={{ margin: '0 5px' }}><RobotOutlined /></span>
                 <div style={{ fontWeight: 700, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: dockOnline ? '#00ee8b' : 'red' }}>
-                  {dockOsd ? EDockModeCode[dockOsd.basic_osd?.mode_code] : EDockModeCode[EDockModeCode.Disconnected]}
+                  {(() => {
+                    if (!dockOnline) return EDockModeCode[EDockModeCode.Disconnected]
+                    if (dockOsd?.basic_osd?.mode_code !== undefined) {
+                      const modeName = EDockModeCode[dockOsd.basic_osd.mode_code]
+                      return modeName || 'Online' // Fallback for unknown mode codes
+                    }
+                    return 'Working' // Has work_osd or link_osd but no basic_osd
+                  })()}
                 </div>
               </div>
               <div style={{ width: 85, marginRight: 0, height: 18, display: 'flex', alignItems: 'center' }}>
@@ -314,7 +320,7 @@ function TsaPage() {
     const droneOnline = droneOsd && droneOsd.mode_code !== EModeCode.Disconnected
 
     return (
-      <div key={device.sn} style={{ background: '#3c3c3c', height: 90, width: 250, marginBottom: 10 }}>
+      <div key={device.gateway.sn} style={{ background: '#3c3c3c', height: 90, width: 250, marginBottom: 10 }}>
         {/* Battery slide */}
         {droneOsd && (
           <div style={{ width: '100%' }}>

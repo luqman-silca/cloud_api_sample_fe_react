@@ -13,16 +13,12 @@ let cleanupTimeoutId: NodeJS.Timeout | null = null
  * Persists across React Strict Mode remounts in development
  */
 export function useConnectWebSocket(messageHandler: MessageHandler) {
-  console.log('useConnectWebSocket hook called')
   const [ws, setWs] = useState<ConnectWebSocket | null>(null)
 
   // Initialize WebSocket once (persists across Strict Mode remounts)
   useEffect(() => {
-    console.log('WebSocket useEffect running, globalWsInstance:', globalWsInstance, 'mountCount:', mountCount)
-
     // Cancel any pending cleanup
     if (cleanupTimeoutId) {
-      console.log('Cancelling pending cleanup')
       clearTimeout(cleanupTimeoutId)
       cleanupTimeoutId = null
     }
@@ -31,12 +27,10 @@ export function useConnectWebSocket(messageHandler: MessageHandler) {
 
     // Check if existing instance is connected, if not, clear it
     if (globalWsInstance && (!globalWsInstance._socket || !globalWsInstance._socket.connected)) {
-      console.log('Existing WebSocket is disconnected, clearing instance')
       globalWsInstance = null
     }
 
     if (!globalWsInstance) {
-      console.log('Creating new WebSocket instance')
       const webSocket = new ConnectWebSocket(getWebsocketUrl())
       globalWsInstance = webSocket
       webSocket.initSocket()
@@ -47,12 +41,10 @@ export function useConnectWebSocket(messageHandler: MessageHandler) {
 
     return () => {
       mountCount--
-      console.log('WebSocket cleanup, mountCount:', mountCount)
 
       // Only close if no components are using it
       cleanupTimeoutId = setTimeout(() => {
         if (mountCount === 0 && globalWsInstance) {
-          console.log('Closing WebSocket (no components using it)')
           globalWsInstance.close()
           globalWsInstance = null
           setWs(null)

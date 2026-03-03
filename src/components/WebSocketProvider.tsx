@@ -9,7 +9,7 @@ interface WebSocketProviderProps {
 }
 
 export function WebSocketProvider({ children }: WebSocketProviderProps) {
-  const { setDeviceInfo, setDockInfo, setGatewayInfo } = useDeviceStore()
+  const { setDeviceInfo, setDockInfo, setGatewayInfo, setDeviceHmsInfo } = useDeviceStore()
 
   // WebSocket message handler for device OSD and events
   const messageHandler = useCallback((payload: any) => {
@@ -21,14 +21,6 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     if (payload.sn) {
       // Check if it's an OSD message (has type field)
       if (payload.type) {
-        // Log only if position data is present (to reduce noise)
-        if (payload.data?.longitude && payload.data?.latitude) {
-          console.log(`📍 Position update - ${payload.type} ${payload.sn}:`, {
-            lng: payload.data.longitude,
-            lat: payload.data.latitude
-          })
-        }
-
         // Update device store based on device type
         if (payload.type === 'dock') {
           setDockInfo({ sn: payload.sn, host: payload.data })
@@ -40,19 +32,25 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
       }
     }
 
-    // Handle legacy biz_code based messages (if any)
+    // Handle biz_code based messages
     switch (payload.biz_code) {
       case EBizCode.DeviceOnline:
-        console.log('Device online:', payload.data)
+        // Device online event handled
         break
       case EBizCode.DeviceOffline:
-        console.log('Device offline:', payload.data)
+        // Device offline event handled
+        break
+      case EBizCode.DeviceHms:
+        // HMS (Health Management System) messages
+        if (payload.data?.sn && payload.data?.host) {
+          setDeviceHmsInfo({ sn: payload.data.sn, host: payload.data.host })
+        }
         break
       default:
         // Unknown message type
         break
     }
-  }, [setDeviceInfo, setDockInfo, setGatewayInfo])
+  }, [setDeviceInfo, setDockInfo, setGatewayInfo, setDeviceHmsInfo])
 
   // Initialize WebSocket connection
   const ws = useConnectWebSocket(messageHandler)

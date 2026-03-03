@@ -66,26 +66,25 @@ export class UranusMqtt extends EventEmitter {
     if (!this._client?.connected) {
       this.initMqtt()
     }
-    window.console.log('subscribeMqtt>>>>>', topic)
     this._client?.subscribe(topic, (error: Error, granted: ISubscriptionGrant[]) => {
-      window.console.log('mqtt subscribe,', error, granted)
+      if (error) {
+        console.error('MQTT subscribe error:', error)
+      }
     })
   }
 
   // 取消订阅
   unsubscribeMqtt = (topic: string) => {
-    window.console.log('mqtt unsubscribeMqtt,', topic)
     this._client?.unsubscribe(topic)
   }
 
   // 关闭 mqtt 客户端
   destroyed = () => {
-    window.console.log('mqtt destroyed')
     this._client?.end()
   }
 
   _onReconnect = () => {
-    if (this._client) { window.console.error('mqtt reconnect,') }
+    // MQTT reconnecting
   }
 
   _onMessage = (topic: string, payload: Buffer, packet: IPublishPacket) => {

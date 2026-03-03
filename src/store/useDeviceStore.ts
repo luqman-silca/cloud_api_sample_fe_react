@@ -157,11 +157,16 @@ export const useDeviceStore = create<DeviceState>((set) => ({
 
   setDeviceHmsInfo: (info) =>
     set((state) => {
-      const hmsList = state.hmsInfo[info.sn] ?? []
+      const existingHms = state.hmsInfo[info.sn] ?? []
+      const existingIds = new Set(existingHms.map(h => h.hms_id))
+
+      // Only add HMS that don't already exist (deduplicate by hms_id)
+      const newHms = info.host.filter(h => !existingIds.has(h.hms_id))
+
       return {
         hmsInfo: {
           ...state.hmsInfo,
-          [info.sn]: info.host.concat(hmsList),
+          [info.sn]: newHms.concat(existingHms),
         },
       }
     }),

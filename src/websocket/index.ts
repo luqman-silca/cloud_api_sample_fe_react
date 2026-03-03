@@ -83,11 +83,10 @@ class ConnectWebSocket {
   }
 
   _onOpen () {
-    console.log('Socket.IO connected successfully')
+    // Connected
   }
 
   _onClose (reason: string) {
-    console.log('Socket.IO disconnected:', reason)
     // Clear joined rooms on disconnect
     this._joinedRooms.clear()
   }
@@ -149,13 +148,11 @@ class ConnectWebSocket {
 
     // Skip if already joined
     if (this._joinedRooms.has(roomKey)) {
-      console.log(`Already in OSD room for device: ${deviceSn}`)
       return
     }
 
     this.emit('join:device:osd', deviceSn)
     this._joinedRooms.add(roomKey)
-    console.log(`Joined OSD room for device: ${deviceSn}`)
   }
 
   /**
@@ -165,13 +162,11 @@ class ConnectWebSocket {
     const roomKey = `osd:${deviceSn}`
 
     if (!this._joinedRooms.has(roomKey)) {
-      console.log(`Not in OSD room for device: ${deviceSn}`)
       return
     }
 
     this.emit('leave:device:osd', deviceSn)
     this._joinedRooms.delete(roomKey)
-    console.log(`Left OSD room for device: ${deviceSn}`)
   }
 
   /**
