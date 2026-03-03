@@ -2,17 +2,15 @@ import EventEmitter from 'eventemitter3'
 import {
   OPTIONS,
 } from './config'
-import * as mqtt from 'mqtt/dist/mqtt'
-import type {
+import {
+  connect,
   MqttClient,
   IClientPublishOptions,
   IPublishPacket,
   Packet,
   ISubscriptionGrant,
   IClientOptions,
-} from 'mqtt'
-
-const { connect } = mqtt
+} from 'mqtt/dist/mqtt.min'
 
 export class UranusMqtt extends EventEmitter {
   _url: string
@@ -22,7 +20,18 @@ export class UranusMqtt extends EventEmitter {
 
   constructor (url?: string, options?: IClientOptions) {
     super()
-    this._url = url || ''
+    // Convert mqtt:// URLs to ws:// for browser compatibility
+    // Browsers cannot use TCP connections, only WebSocket
+    let browserUrl = url || ''
+    console.log('[MQTT] Original URL:', browserUrl)
+    if (browserUrl.startsWith('mqtt://')) {
+      browserUrl = browserUrl.replace('mqtt://', 'ws://')
+      console.log('[MQTT] Converted to WebSocket URL:', browserUrl)
+    } else if (browserUrl.startsWith('mqtts://')) {
+      browserUrl = browserUrl.replace('mqtts://', 'wss://')
+      console.log('[MQTT] Converted to Secure WebSocket URL:', browserUrl)
+    }
+    this._url = browserUrl
     this._options = options
     this._client = null
     this._hasInit = false

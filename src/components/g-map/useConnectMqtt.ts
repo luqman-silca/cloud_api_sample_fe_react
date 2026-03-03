@@ -28,6 +28,8 @@ export function useConnectMqtt() {
         if (cancelled) return
         if (result?.code === 0) {
           const { address, client_id, username, password } = result.data
+          console.log('[MQTT] Address from backend:', address)
+          console.log('[MQTT] Client ID:', client_id)
           const mqtt = new UranusMqtt(address, {
             clientId: client_id,
             username,
