@@ -2,15 +2,17 @@ import EventEmitter from 'eventemitter3'
 import {
   OPTIONS,
 } from './config'
-import {
-  connect,
+import * as mqtt from 'mqtt/dist/mqtt'
+import type {
   MqttClient,
   IClientPublishOptions,
   IPublishPacket,
   Packet,
   ISubscriptionGrant,
   IClientOptions,
-} from 'mqtt/dist/mqtt.min'
+} from 'mqtt'
+
+const { connect } = mqtt
 
 export class UranusMqtt extends EventEmitter {
   _url: string

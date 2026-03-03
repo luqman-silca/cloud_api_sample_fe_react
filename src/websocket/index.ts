@@ -1,6 +1,6 @@
 import { message } from 'antd'
 import { io, Socket } from 'socket.io-client'
-import { EBizCode } from '../types'
+import { EBizCode, ELocalStorageKey, ERouterName, EUserType } from '../types'
 
 interface WebSocketOptions {
   data: any
@@ -28,6 +28,7 @@ class ConnectWebSocket {
   _messageHandler: MessageHandler | null
   _token: string
   _joinedRooms: Set<string>  // Track joined rooms
+  _authErrorCount: number  // Track consecutive auth errors
 
   constructor (url: string) {
     this._url = url
@@ -36,6 +37,7 @@ class ConnectWebSocket {
     this._messageHandler = null
     this._token = ''
     this._joinedRooms = new Set()
+    this._authErrorCount = 0
 
     // Extract token from URL if present (ws://url?x-auth-token=xxx)
     const urlObj = new URL(url.replace('ws://', 'http://').replace('wss://', 'https://'))
@@ -83,7 +85,8 @@ class ConnectWebSocket {
   }
 
   _onOpen () {
-    // Connected
+    // Connected - reset auth error count
+    this._authErrorCount = 0
   }
 
   _onClose (reason: string) {
@@ -91,8 +94,86 @@ class ConnectWebSocket {
     this._joinedRooms.clear()
   }
 
-  _onError (error: Error) {
-    console.error('Socket.IO connection error:', error)
+  async _onError (error: any) {
+    // Check if this is an authentication error
+    const isAuthError = error?.message?.includes('Authentication error') || error?.message?.includes('Invalid token')
+
+    if (isAuthError) {
+      // Check if user is on login page - if so, always silently ignore auth errors
+      // Login pages: /project, /pilot
+      const currentPath = window.location.pathname
+      const isOnLoginPage = currentPath === '/project' ||
+                           currentPath === '/' ||
+                           currentPath === '/pilot'
+
+      if (isOnLoginPage) {
+        // On login page - silently ignore ALL auth errors
+        // This is expected behavior since user hasn't logged in yet
+        // or has been redirected here after token expiry
+        return
+      }
+
+      // Not on login page - we have a token but it's invalid, try to refresh
+      console.error('Socket.IO authentication error:', error)
+      this._authErrorCount++
+
+      // Only try to refresh token once to avoid infinite loop
+      if (this._authErrorCount === 1) {
+        console.log('WebSocket authentication failed, attempting to refresh token...')
+
+        try {
+          // Import axios instance (avoid circular dependency)
+          const { default: request } = await import('@/api/http/request')
+
+          // Attempt to refresh token
+          const refreshResponse = await request.post('/manage/api/v1/token/refresh', {})
+
+          if (refreshResponse.data.code === 0 && refreshResponse.data.data?.token) {
+            const newToken = refreshResponse.data.data.token
+
+            // Update token in localStorage
+            localStorage.setItem(ELocalStorageKey.Token, newToken)
+
+            // Update token in this instance
+            this._token = newToken
+
+            console.log('Token refreshed successfully, reconnecting WebSocket...')
+
+            // Disconnect and reconnect with new token
+            if (this._socket) {
+              this._socket.auth = { token: newToken }
+              this._socket.disconnect()
+              this._socket.connect()
+            }
+
+            return
+          }
+        } catch (refreshError) {
+          console.error('Failed to refresh token for WebSocket:', refreshError)
+        }
+      }
+
+      // If we've tried multiple times or refresh failed, redirect to login
+      if (this._authErrorCount >= 2) {
+        console.error('WebSocket authentication failed after token refresh, redirecting to login...')
+
+        // Clear expired token from localStorage
+        localStorage.removeItem(ELocalStorageKey.Token)
+
+        const flag: number = Number(localStorage.getItem(ELocalStorageKey.Flag))
+        switch (flag) {
+          case EUserType.Web:
+            window.location.href = '/' + ERouterName.PROJECT
+            break
+          case EUserType.Pilot:
+            window.location.href = '/' + ERouterName.PILOT
+            break
+        }
+      }
+    } else {
+      // Non-auth errors should still be logged
+      console.error('Socket.IO connection error:', error)
+    }
   }
 
   registerMessageHandler (messageHandler: MessageHandler) {
