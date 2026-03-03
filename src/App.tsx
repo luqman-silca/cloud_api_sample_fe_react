@@ -35,13 +35,13 @@ function App() {
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       {isAuthenticated ? (
         <WebSocketProvider>
-          <div className="demo-app">
+          <div className="demo-app" style={{ height: '100%' }}>
             <AppRoutes />
           </div>
         </WebSocketProvider>
       ) : (
         <WebSocketContext.Provider value={{ ws: null }}>
-          <div className="demo-app">
+          <div className="demo-app" style={{ height: '100%' }}>
             <AppRoutes />
           </div>
         </WebSocketContext.Provider>

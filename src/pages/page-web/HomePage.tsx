@@ -31,7 +31,7 @@ function HomePage() {
       >
         <Topbar />
       </Header>
-      <Content>
+      <Content style={{ height: 'calc(100vh - 60px)' }}>
         <Outlet />
       </Content>
     </Layout>

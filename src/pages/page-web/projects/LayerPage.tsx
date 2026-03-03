@@ -81,8 +81,14 @@ function LayerPage() {
     async (type?: string) => {
       const result = await getElementGroupsReq({ groupId: '', isDistributed: true })
       let layers = result.data
+
+      // Ensure layers is an array
+      if (!Array.isArray(layers)) {
+        layers = []
+      }
+
       // Transform coordinates from WGS84 to GCJ02
-      layers?.forEach((item: any) => {
+      layers.forEach((item: any) => {
         if (item.elements) {
           item.elements.forEach((ele: any) => {
             updateCoordinates('wgs84-gcj02', ele)

@@ -378,7 +378,7 @@ function TsaPage() {
     label: 'Dock',
     style: { borderBottom: '1px solid #4f4f4f' },
     children: onlineDocks.length === 0
-      ? <div style={{ height: 150, color: 'white' }}><Empty image={noData} imageStyle={{ height: 60 }} /></div>
+      ? <div style={{ height: 150, color: 'white' }}><Empty image={noData} styles={{ image: { height: 60 } }} /></div>
       : <div style={{ fontSize: 12, color: 'white' }}>{onlineDocks.map(renderDockItem)}</div>,
   }], [onlineDocks, dockInfo, deviceInfo, hmsInfo, osdVisible, hmsVisible])
 
@@ -387,7 +387,7 @@ function TsaPage() {
     label: 'Online Devices',
     style: { borderBottom: '1px solid #4f4f4f' },
     children: onlineDevices.length === 0
-      ? <div style={{ height: 150, color: 'white' }}><Empty image={noData} imageStyle={{ height: 60 }} /></div>
+      ? <div style={{ height: 150, color: 'white' }}><Empty image={noData} styles={{ image: { height: 60 } }} /></div>
       : <div style={{ fontSize: 12, color: 'white' }}>{onlineDevices.map(renderDeviceItem)}</div>,
   }], [onlineDevices, deviceInfo, osdVisible])
 

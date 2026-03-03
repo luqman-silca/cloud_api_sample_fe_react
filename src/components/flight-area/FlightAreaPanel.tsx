@@ -10,7 +10,7 @@ interface FlightAreaPanelProps {
 
 function FlightAreaPanel({ data, onDeleteArea, onLocationArea }: FlightAreaPanelProps) {
   if (data.length === 0) {
-    return <Empty imageStyle={{ height: 60, marginTop: 60 }} />
+    return <Empty styles={{ image: { height: 60, marginTop: 60 } }} />
   }
 
   return (

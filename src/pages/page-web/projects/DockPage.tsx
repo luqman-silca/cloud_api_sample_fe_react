@@ -117,7 +117,7 @@ function DockPage() {
             ))}
           </div>
         ) : (
-          <Empty imageStyle={{ height: 60, marginTop: 60 }} />
+          <Empty styles={{ image: { height: 60, marginTop: 60 } }} />
         )}
       </div>
     </div>

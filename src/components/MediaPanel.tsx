@@ -147,7 +147,7 @@ function MediaPanel() {
           <Table
             columns={columns}
             dataSource={mediaData}
-            rowKey="fingerprint"
+            rowKey={(record) => record.fingerprint || record.file_id || `${record.file_name}-${record.create_time}`}
             pagination={pagination}
             scroll={{ x: '100%', y: 600 }}
             onChange={handleTableChange}

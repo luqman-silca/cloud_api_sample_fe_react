@@ -160,8 +160,8 @@ function WaylinePage() {
         <div className="scrollbar" style={{ height: height || 'calc(100% - 50px)', overflow: 'auto' }}>
           {waylinesData.length !== 0 ? (
             <div id="wayline-data" className="uranus-scrollbar" style={{ height: '100%', overflow: 'auto' }} onScroll={onScroll}>
-              {waylinesData.map((wayline) => (
-                <div key={wayline.id}>
+              {waylinesData.map((wayline, index) => (
+                <div key={wayline.id || `wayline-${index}`}>
                   <div
                     style={{
                       background: '#3c3c3c',
@@ -220,7 +220,7 @@ function WaylinePage() {
               ))}
             </div>
           ) : (
-            <Empty imageStyle={{ height: 60, marginTop: 60 }} />
+            <Empty styles={{ image: { height: 60, marginTop: 60 } }} />
           )}
           <Modal
             open={deleteTip}

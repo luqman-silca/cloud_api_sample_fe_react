@@ -14,11 +14,11 @@ function WorkspacePage() {
 
   return (
     <div style={{ display: 'flex', transition: 'width 0.2s ease', height: '100%', width: '100%' }}>
-      <div style={{ display: 'flex', width: 335, flex: '0 0 335px', backgroundColor: '#232323' }}>
+      <div style={{ display: 'flex', width: 335, flex: '0 0 335px', backgroundColor: '#232323', height: '100%' }}>
         <Sidebar />
         <div
           className="uranus-scrollbar dark"
-          style={{ flex: 1, color: '#fff', width: 285, overflow: 'auto' }}
+          style={{ flex: 1, color: '#fff', width: 285, overflow: 'auto', height: '100%' }}
         >
           <Outlet />
         </div>
