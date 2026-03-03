@@ -18,7 +18,6 @@ let cleanupTimeoutId: NodeJS.Timeout | null = null
 export function useConnectWebSocket(messageHandler: MessageHandler) {
   const [ws, setWs] = useState<ConnectWebSocket | null>(null)
   const [hasToken, setHasToken] = useState(() => !!localStorage.getItem(ELocalStorageKey.Token))
-  const [currentPath, setCurrentPath] = useState(() => window.location.pathname)
 
   // Watch for token changes (e.g., after login)
   useEffect(() => {
@@ -27,39 +26,28 @@ export function useConnectWebSocket(messageHandler: MessageHandler) {
       setHasToken(!!token)
     }
 
-    const checkPath = () => {
-      setCurrentPath(window.location.pathname)
-    }
-
     // Check immediately
     checkToken()
-    checkPath()
 
     // Listen for storage changes (in case token is updated in another tab)
     window.addEventListener('storage', checkToken)
 
-    // Listen for URL changes (popstate for back/forward, hashchange if using hash router)
-    window.addEventListener('popstate', checkPath)
-
-    // Also check periodically in case localStorage or pathname changes in same tab
-    const interval = setInterval(() => {
-      checkToken()
-      checkPath()
-    }, 1000)
+    // Also check periodically in case localStorage changes in same tab
+    const interval = setInterval(checkToken, 1000)
 
     return () => {
       window.removeEventListener('storage', checkToken)
-      window.removeEventListener('popstate', checkPath)
       clearInterval(interval)
     }
   }, [])
 
   // Initialize WebSocket when token becomes available AND not on login page
   useEffect(() => {
-    // Check if we're on a login page - never connect WebSocket on login pages
-    const isOnLoginPage = currentPath === '/project' ||
-                         currentPath === '/' ||
-                         currentPath === '/pilot'
+    // Check CURRENT path (not state) to avoid re-running effect on every navigation
+    const currentPathNow = window.location.pathname
+    const isOnLoginPage = currentPathNow === '/project' ||
+                         currentPathNow === '/' ||
+                         currentPathNow === '/pilot'
 
     // If no token OR on login page, close any existing WebSocket and don't connect
     if (!hasToken || isOnLoginPage) {
@@ -106,7 +94,7 @@ export function useConnectWebSocket(messageHandler: MessageHandler) {
         cleanupTimeoutId = null
       }, 100)
     }
-  }, [hasToken, currentPath])
+  }, [hasToken])
 
   // Update message handler when it changes (without reconnecting)
   useEffect(() => {
